@@ -341,7 +341,7 @@ impl PipelineConfig {
 }
 
 /// Koreň konfigurácie aplikácie.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppConfig {
     pub python: PythonEnvironments,
@@ -350,19 +350,6 @@ pub struct AppConfig {
     pub scripts: ScriptsConfig,
     pub rocm: RocmConfig,
     pub pipeline: PipelineConfig,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            python: PythonEnvironments::default(),
-            models: ModelsConfig::default(),
-            paths: PathsConfig::default(),
-            scripts: ScriptsConfig::default(),
-            rocm: RocmConfig::default(),
-            pipeline: PipelineConfig::default(),
-        }
-    }
 }
 
 impl AppConfig {
@@ -491,9 +478,11 @@ mod tests {
 
     #[test]
     fn rocm_environment_contains_only_configured_values() {
-        let mut config = RocmConfig::default();
-        config.rocm_home = Some(PathBuf::from("/opt/rocm"));
-        config.hip_visible_devices = Some("0".to_owned());
+        let config = RocmConfig {
+            rocm_home: Some(PathBuf::from("/opt/rocm")),
+            hip_visible_devices: Some("0".to_owned()),
+            ..RocmConfig::default()
+        };
 
         let environment = config.environment();
         assert_eq!(environment.get("ROCM_HOME"), Some(&"/opt/rocm".to_owned()));

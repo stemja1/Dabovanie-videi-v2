@@ -4,7 +4,7 @@ Rust desktopová aplikácia pre automatizovaný dabing videa zo slovenčiny do �
 
 ## Stav projektu
 
-Implementovaná je **Fáza 1**:
+Implementované sú **Fázy 1 a 2**:
 
 - doménové typy v `src/types.rs`,
 - striktne definovaný `PipelineState` a povolené prechody,
@@ -12,9 +12,13 @@ Implementovaná je **Fáza 1**:
 - samostatné Python venv konfigurácie pre Whisper-SK, NLLB, Coqui XTTS-v2 a LatentSync,
 - nastavenia modelov, skriptov, temp/output adresárov a ROCm environmentu,
 - `thiserror` chyby pre konfiguráciu a aplikačná chybová hranica,
+- Tokio orchestration engine v `src/engine/`,
+- `tokio::process::Command` runner so súčasným čítaním stdout/stderr,
+- regex progress parser a streamovanie logov/progressu cez `tokio::sync::mpsc`,
+- `CancellationToken` pre zrušenie aktívneho subprocessu,
 - kostra adresárov pre ďalšie fázy.
 
-Tokio orchestration, Python subprocess adaptéry, GUI a deployment skripty budú doplnené postupne. PyO3 nie je a nebude použitý.
+Fáza 2 ešte nespúšťa konkrétne modely. `NoopPlanner` je dočasný planner; konkrétny Whisper → NLLB → XTTS → LatentSync → FFmpeg plán sa zapojí vo Fáze 3. PyO3 nie je a nebude použitý.
 
 ## Lokálne spustenie fázy 1
 

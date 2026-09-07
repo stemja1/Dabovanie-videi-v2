@@ -5,5 +5,6 @@
 //! aby GUI nebolo závislé od implementácie pipeline.
 
 pub mod config;
+pub mod engine;
 pub mod error;
 pub mod types;

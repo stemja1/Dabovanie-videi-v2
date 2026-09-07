@@ -9,9 +9,10 @@ pub type SegmentId = u64;
 /// Enum je zámerne bez dátových polí. Detail chyby, správa a percento
 /// postupu sa prenášajú samostatnými eventmi, takže GUI môže stav bezpečne
 /// serializovať aj zobraziť bez väzby na konkrétny backend.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PipelineState {
+    #[default]
     Idle,
     Transcribing,
     Translating,
@@ -20,12 +21,6 @@ pub enum PipelineState {
     Rendering,
     Failed,
     Completed,
-}
-
-impl Default for PipelineState {
-    fn default() -> Self {
-        Self::Idle
-    }
 }
 
 impl PipelineState {
@@ -87,20 +82,15 @@ impl fmt::Display for PipelineState {
 }
 
 /// Úroveň logovacej správy zobraziteľná v GUI.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     Trace,
     Debug,
+    #[default]
     Info,
     Warn,
     Error,
-}
-
-impl Default for LogLevel {
-    fn default() -> Self {
-        Self::Info
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
