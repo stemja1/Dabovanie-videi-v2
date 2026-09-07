@@ -1,6 +1,9 @@
 use super::process::{ProcessError, ProcessRunner, ProcessSpec};
-use crate::types::{
-    EngineCommand, EngineEvent, LogEntry, LogLevel, PipelineRequest, PipelineState,
+use crate::{
+    modules::cleanup::{cleanup_workspace, CleanupError},
+    types::{
+        CleanupPlan, EngineCommand, EngineEvent, LogEntry, LogLevel, PipelineRequest, PipelineState,
+    },
 };
 use std::sync::Arc;
 use thiserror::Error;
@@ -11,11 +14,20 @@ use tokio_util::sync::CancellationToken;
 #[derive(Debug, Clone, Default)]
 pub struct PipelinePlan {
     pub stages: Vec<ProcessSpec>,
+    pub cleanup: Option<CleanupPlan>,
 }
 
 impl PipelinePlan {
     pub fn new(stages: Vec<ProcessSpec>) -> Self {
-        Self { stages }
+        Self {
+            stages,
+            cleanup: None,
+        }
+    }
+
+    pub fn with_cleanup(mut self, cleanup: CleanupPlan) -> Self {
+        self.cleanup = Some(cleanup);
+        self
     }
 
     pub fn is_empty(&self) -> bool {
@@ -50,6 +62,12 @@ pub enum PlannerError {
     #[error("pipeline plán neobsahuje žiadny proces")]
     EmptyPlan,
 
+    #[error("modul `{module}` sa nepodarilo nakonfigurovať: {message}")]
+    Module { module: String, message: String },
+
+    #[error("pipeline planner I/O operácia zlyhala: {0}")]
+    Io(#[from] std::io::Error),
+
     #[error("pipeline plán je neplatný: {0}")]
     Invalid(String),
 }
@@ -61,6 +79,15 @@ pub enum EngineError {
 
     #[error(transparent)]
     Process(#[from] ProcessError),
+
+    #[error(transparent)]
+    Cleanup(#[from] CleanupError),
+
+    #[error("pipeline zlyhala ({pipeline_error}) a cleanup tiež zlyhal ({cleanup_error})")]
+    PipelineAndCleanup {
+        pipeline_error: String,
+        cleanup_error: String,
+    },
 
     #[error("neplatný prechod stavu pipeline: {from:?} -> {to:?}")]
     InvalidStateTransition {
@@ -302,8 +329,46 @@ where
         return Err(PlannerError::EmptyPlan.into());
     }
 
+    let cleanup_plan = plan.cleanup.clone();
+    let execution = execute_stages(plan.stages, runner, event_sender.clone(), cancellation).await;
+
+    match execution {
+        Ok(_) => {
+            if let Some(cleanup_plan) = cleanup_plan.as_ref() {
+                cleanup_workspace(cleanup_plan, true).await?;
+            }
+
+            event_sender
+                .send(EngineEvent::StateChanged {
+                    state: PipelineState::Completed,
+                })
+                .await
+                .map_err(|_| EngineError::EventChannelClosed)?;
+
+            Ok(request)
+        }
+        Err(pipeline_error) => {
+            if let Some(cleanup_plan) = cleanup_plan.as_ref() {
+                if let Err(cleanup_error) = cleanup_workspace(cleanup_plan, false).await {
+                    return Err(EngineError::PipelineAndCleanup {
+                        pipeline_error: pipeline_error.to_string(),
+                        cleanup_error: cleanup_error.to_string(),
+                    });
+                }
+            }
+            Err(pipeline_error)
+        }
+    }
+}
+
+async fn execute_stages(
+    stages: Vec<ProcessSpec>,
+    runner: ProcessRunner,
+    event_sender: mpsc::Sender<EngineEvent>,
+    cancellation: CancellationToken,
+) -> Result<PipelineState, EngineError> {
     let mut current_state = PipelineState::Idle;
-    for stage in plan.stages {
+    for stage in stages {
         if !current_state.can_transition_to(stage.state) {
             return Err(EngineError::InvalidStateTransition {
                 from: current_state,
@@ -330,14 +395,7 @@ where
         });
     }
 
-    event_sender
-        .send(EngineEvent::StateChanged {
-            state: PipelineState::Completed,
-        })
-        .await
-        .map_err(|_| EngineError::EventChannelClosed)?;
-
-    Ok(request)
+    Ok(current_state)
 }
 
 #[cfg(test)]
@@ -386,6 +444,7 @@ mod tests {
                 input_video: PathBuf::from("input.mp4"),
                 output_video: PathBuf::from("output.mp4"),
                 voice_reference: None,
+                job_id: None,
             }))
             .await
             .unwrap();
@@ -410,6 +469,7 @@ mod tests {
                 input_video: PathBuf::from("input.mp4"),
                 output_video: PathBuf::from("output.mp4"),
                 voice_reference: None,
+                job_id: None,
             }))
             .await
             .unwrap();

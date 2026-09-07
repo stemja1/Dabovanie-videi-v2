@@ -7,4 +7,5 @@
 pub mod config;
 pub mod engine;
 pub mod error;
+pub mod modules;
 pub mod types;

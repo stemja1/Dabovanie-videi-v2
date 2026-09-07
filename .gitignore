@@ -3,6 +3,9 @@
 
 # Runtime data, models and local configuration
 /config.toml
+/.pytest_cache/
+__pycache__/
+*.pyc
 /work/
 /output/
 /models/

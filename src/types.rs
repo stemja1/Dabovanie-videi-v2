@@ -144,9 +144,32 @@ pub struct PipelineRequest {
     pub output_video: PathBuf,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_reference: Option<PathBuf>,
+    /// Voliteľný identifikátor jobu. Planner ho použije pri tvorbe izolovaného
+    /// workspace v temp adresári.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
 }
 
-/// Cesty k medzivýsledkom jedného behu.
+/// Bezpečnostný plán odstránenia pracovného adresára jobu.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CleanupPlan {
+    pub allowed_root: PathBuf,
+    pub workspace: PathBuf,
+    pub on_success: bool,
+    pub on_failure: bool,
+}
+
+impl CleanupPlan {
+    pub fn should_cleanup(&self, successful: bool) -> bool {
+        if successful {
+            self.on_success
+        } else {
+            self.on_failure
+        }
+    }
+}
+
+/// Cesty k medzivýsledkom
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PipelineArtifacts {
     pub utterance_metadata: PathBuf,
