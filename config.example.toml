@@ -1,0 +1,50 @@
+# Príklad konfigurácie pre WSL2 / Ubuntu 24.04 + AMD ROCm.
+# Cesty sú relatívne voči adresáru tohto súboru.
+
+[python.whisper_sk]
+path = "venvs/whisper-sk"
+# executable = "/absolute/path/to/venvs/whisper-sk/bin/python"
+
+[python.translation]
+path = "venvs/translation"
+
+[python.coqui_xtts]
+path = "venvs/coqui-xtts"
+
+[python.latentsync]
+path = "venvs/latentsync"
+
+[models]
+whisper_sk = "NaiveNeuron/whisper-large-v3-sk"
+nllb_200 = "facebook/nllb-200-distilled-600M"
+xtts_v2 = "tts_models/multilingual/multi-dataset/xtts_v2"
+latentsync = "models/latentsync"
+
+[paths]
+working_dir = "work"
+temp_dir = "work/tmp"
+output_dir = "output"
+ffmpeg_binary = "ffmpeg"
+ffprobe_binary = "ffprobe"
+
+[scripts]
+whisper = "scripts/whisper_sk.py"
+translation = "scripts/translate_nllb.py"
+tts = "scripts/synthesize_xtts.py"
+latentsync = "scripts/latentsync.py"
+
+[rocm]
+enabled = true
+# rocm_home = "/opt/rocm"
+# hip_visible_devices = "0"
+# hsa_override_gfx_version = "10.3.0"
+# extra_environment = { PYTORCH_HIP_ALLOC_CONF = "expandable_segments:True" }
+
+[pipeline]
+source_language = "sk"
+target_language = "zh"
+nllb_source_language = "slk_Latn"
+nllb_target_language = "zho_Hans"
+max_tts_chars = 240
+cleanup_on_success = true
+cleanup_on_failure = false

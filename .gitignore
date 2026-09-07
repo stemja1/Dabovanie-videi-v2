@@ -1,0 +1,16 @@
+# Rust build artefacts
+/target/
+
+# Runtime data, models and local configuration
+/config.toml
+/work/
+/output/
+/models/
+/venvs/
+
+# Local/editor files
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
